@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>洗碗和平締結者 - 兩人專屬紀錄</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <!-- Load Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Load FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f3f4f6; /* bg-gray-100 */
+        }
+        
+        /* Custom scrollbar for the history table */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Fade transition for Vue */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+        
+        /* Slide transition for modals */
+        .slide-enter-active, .slide-leave-active {
+            transition: all 0.3s ease;
+        }
+        .slide-enter-from, .slide-leave-to {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen text-gray-800 p-4 md:p-8">
+
+    <div id="app" class="max-w-2xl mx-auto space-y-6" v-cloak>
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-hands-bubbles text-blue-500"></i>
+                    洗碗和平紀錄
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">公平、透明、不吵架</p>
+            </div>
+            <button @click="showSettings = true" class="w-10 h-10 rounded-full bg-white shadow flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+        </header>
+
+        <!-- Current Turn Display -->
+        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-3xl p-6 text-white shadow-lg shadow-blue-200 relative overflow-hidden">
+            <!-- Background Decoration -->
+            <i class="fa-solid fa-sink absolute -right-4 -bottom-4 text-8xl opacity-10 transform -rotate-12"></i>
+            
+            <div class="relative z-10">
+                <p class="text-blue-100 text-sm font-medium mb-1">系統判定今日輪值</p>
+                <div class="flex items-center gap-4 mt-2">
+                    <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30">
+                        <i class="fa-solid fa-user text-2xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold tracking-wide">{{ expectedWasher }}</h2>
+                        <p class="text-sm mt-1 opacity-90">
+                            上次是 {{ lastWasherDisplay }} 洗的
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-pen-to-square text-indigo-500"></i>
+                新增洗碗登記
+            </h3>
+            
+            <form @submit.prevent="submitLog" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Date Input -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">日期</label>
+                        <input type="date" v-model="formData.date" required
+                            class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-700">
+                    </div>
+
+                    <!-- Meal Time Select -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">時段</label>
+                        <select v-model="formData.mealTime" required
+                            class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-700 bg-white">
+                            <option value="早餐">早餐</option>
+                            <option value="午餐">午餐</option>
+                            <option value="晚餐">晚餐</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Washer Select -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">這次是誰洗的？</label>
+                        <select v-model="formData.washer" required
+                            class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-700 bg-white">
+                            <option :value="userA">{{ userA }}</option>
+                            <option :value="userB">{{ userB }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Notes Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">備註 (選填)</label>
+                    <input type="text" v-model="formData.notes" placeholder="例如：今天吃大餐鍋子很油、代班..."
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-700">
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" 
+                    class="w-full mt-2 bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-4 rounded-xl transition-transform transform active:scale-95 shadow-md flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-check"></i>
+                    確認登記
+                </button>
+            </form>
+        </div>
+
+        <!-- History Table -->
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-indigo-500"></i>
+                歷史紀錄
+            </h3>
+            
+            <div v-if="logs.length === 0" class="text-center py-8 text-gray-400">
+                <i class="fa-solid fa-folder-open text-4xl mb-3 opacity-50"></i>
+                <p>目前還沒有任何紀錄喔！</p>
+            </div>
+
+            <div v-else class="overflow-x-auto">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead>
+                        <tr class="text-gray-500 border-b border-gray-100">
+                            <th class="pb-3 font-medium px-2">日期</th>
+                            <th class="pb-3 font-medium px-2">時段</th>
+                            <th class="pb-3 font-medium px-2">洗碗人</th>
+                            <th class="pb-3 font-medium px-2">備註</th>
+                            <th class="pb-3 font-medium px-2 text-right">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        <tr v-for="log in sortedLogs" :key="log.id" class="hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2 text-gray-600">{{ formatDate(log.date) }}</td>
+                            <td class="py-3 px-2 text-gray-600 font-medium">{{ log.mealTime || '-' }}</td>
+                            <td class="py-3 px-2">
+                                <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                      :class="log.washer === userA ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'">
+                                    {{ log.washer }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-2 text-gray-500 truncate max-w-[150px]" :title="log.notes">
+                                {{ log.notes || '-' }}
+                            </td>
+                            <td class="py-3 px-2 text-right">
+                                <button @click="confirmDelete(log.id)" class="text-red-400 hover:text-red-600 p-1 transition-colors" title="刪除紀錄">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Custom Notification Toast -->
+        <Transition name="slide">
+            <div v-if="notification.show" 
+                 class="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 rounded-full shadow-lg text-white font-medium"
+                 :class="notification.type === 'success' ? 'bg-green-500' : (notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500')">
+                <i class="fa-solid" :class="notification.type === 'success' ? 'fa-circle-check' : 'fa-circle-info'"></i>
+                {{ notification.message }}
+            </div>
+        </Transition>
+
+        <!-- Settings Modal (Rename Users) -->
+        <Transition name="fade">
+            <div v-if="showSettings" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-40 p-4">
+                <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl" @click.stop>
+                    <h3 class="text-xl font-bold mb-4">設定成員名稱</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">成員 1</label>
+                            <input type="text" v-model="tempUserA" class="w-full border p-2 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">成員 2</label>
+                            <input type="text" v-model="tempUserB" class="w-full border p-2 rounded-lg">
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button @click="showSettings = false" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+                        <button @click="saveSettings" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow">儲存</button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+        
+        <!-- Delete Confirmation Modal (Replacing window.confirm) -->
+        <Transition name="fade">
+            <div v-if="deleteModal.show" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-40 p-4">
+                <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl text-center">
+                    <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">確定要刪除嗎？</h3>
+                    <p class="text-gray-500 mb-6">刪除後紀錄將無法復原，這可能會影響輪替的判定喔！</p>
+                    <div class="flex gap-3">
+                        <button @click="deleteModal.show = false" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors">取消</button>
+                        <button @click="executeDelete" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors">確認刪除</button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                // 取得今天的日期字串 YYYY-MM-DD
+                const today = new Date().toISOString().split('T')[0];
+                
+                // 根據當下時間自動判斷早中晚
+                const hour = new Date().getHours();
+                let defaultMeal = '晚餐';
+                if (hour < 11) defaultMeal = '早餐';
+                else if (hour < 16) defaultMeal = '午餐';
+
+                return {
+                    // 使用者設定
+                    userA: '成員 A',
+                    userB: '成員 B',
+                    tempUserA: '',
+                    tempUserB: '',
+                    showSettings: false,
+
+                    // 表單資料
+                    formData: {
+                        date: today,
+                        mealTime: defaultMeal,
+                        washer: '',
+                        notes: ''
+                    },
+
+                    // 歷史紀錄
+                    logs: [],
+
+                    // 提示系統狀態
+                    notification: {
+                        show: false,
+                        message: '',
+                        type: 'success'
+                    },
+                    
+                    // 刪除確認狀態
+                    deleteModal: {
+                        show: false,
+                        targetId: null
+                    }
+                }
+            },
+            computed: {
+                // 依照日期、時段與ID降冪排序
+                sortedLogs() {
+                    const mealWeight = { '早餐': 1, '午餐': 2, '晚餐': 3 };
+                    return [...this.logs].sort((a, b) => {
+                        // 先比日期
+                        if (a.date !== b.date) {
+                            return new Date(b.date) - new Date(a.date);
+                        }
+                        // 日期一樣比時段 (晚餐 > 午餐 > 早餐)
+                        const weightA = mealWeight[a.mealTime] || 0;
+                        const weightB = mealWeight[b.mealTime] || 0;
+                        if (weightA !== weightB) {
+                            return weightB - weightA;
+                        }
+                        // 時段一樣比ID (時間戳記)
+                        return b.id - a.id;
+                    });
+                },
+                // 計算最新一筆是誰洗的
+                lastWasher() {
+                    if (this.sortedLogs.length === 0) return null;
+                    return this.sortedLogs[0].washer;
+                },
+                lastWasherDisplay() {
+                    return this.lastWasher ? this.lastWasher : '無人';
+                },
+                // 核心邏輯：推斷今天是誰的輪次
+                expectedWasher() {
+                    if (!this.lastWasher) return this.userA; // 如果沒紀錄，預設A先
+                    // 輪替邏輯：如果是A洗的，就換B；反之亦然。
+                    return this.lastWasher === this.userA ? this.userB : this.userA;
+                }
+            },
+            watch: {
+                // 當 expectedWasher 改變時，自動更新表單的預設選取人
+                expectedWasher: {
+                    immediate: true,
+                    handler(newVal) {
+                        this.formData.washer = newVal;
+                    }
+                }
+            },
+            methods: {
+                // 提交登記
+                submitLog() {
+                    if (!this.formData.date || !this.formData.washer || !this.formData.mealTime) {
+                        this.showToast('請填寫完整資訊！', 'error');
+                        return;
+                    }
+
+                    const newLog = {
+                        id: Date.now(), // 使用時間戳作為唯一ID
+                        date: this.formData.date,
+                        mealTime: this.formData.mealTime,
+                        washer: this.formData.washer,
+                        notes: this.formData.notes
+                    };
+
+                    // 加入陣列
+                    this.logs.push(newLog);
+                    
+                    // 存檔並重置表單 (除了日期保留今日)
+                    this.saveData();
+                    this.formData.notes = '';
+                    
+                    // expectedWasher 會因為 logs 改變而自動重新計算
+                    // formData.washer 也會因為 watch 監聽而自動切換為下一個人
+                    
+                    this.showToast(`登記成功！下次換 ${this.expectedWasher} 洗囉！`, 'success');
+                },
+
+                // 準備刪除紀錄
+                confirmDelete(id) {
+                    this.deleteModal.targetId = id;
+                    this.deleteModal.show = true;
+                },
+                
+                // 執行刪除
+                executeDelete() {
+                    this.logs = this.logs.filter(log => log.id !== this.deleteModal.targetId);
+                    this.saveData();
+                    this.deleteModal.show = false;
+                    this.deleteModal.targetId = null;
+                    this.showToast('紀錄已刪除', 'info');
+                },
+
+                // 儲存至 LocalStorage
+                saveData() {
+                    localStorage.setItem('dishTrackerLogs', JSON.stringify(this.logs));
+                    localStorage.setItem('dishTrackerUsers', JSON.stringify({ a: this.userA, b: this.userB }));
+                },
+
+                // 從 LocalStorage 讀取
+                loadData() {
+                    const savedLogs = localStorage.getItem('dishTrackerLogs');
+                    if (savedLogs) {
+                        this.logs = JSON.parse(savedLogs);
+                    }
+                    
+                    const savedUsers = localStorage.getItem('dishTrackerUsers');
+                    if (savedUsers) {
+                        const parsed = JSON.parse(savedUsers);
+                        this.userA = parsed.a;
+                        this.userB = parsed.b;
+                    }
+                },
+
+                // 儲存設定 (名稱修改)
+                saveSettings() {
+                    if(!this.tempUserA || !this.tempUserB) {
+                        this.showToast('成員名稱不能為空', 'error');
+                        return;
+                    }
+                    
+                    // 找出歷史紀錄中舊名字並更新為新名字 (保持紀錄連貫性)
+                    this.logs = this.logs.map(log => {
+                        if (log.washer === this.userA) log.washer = this.tempUserA;
+                        if (log.washer === this.userB) log.washer = this.tempUserB;
+                        return log;
+                    });
+
+                    this.userA = this.tempUserA;
+                    this.userB = this.tempUserB;
+                    
+                    // 重新指定表單預設值
+                    this.formData.washer = this.expectedWasher;
+                    
+                    this.saveData();
+                    this.showSettings = false;
+                    this.showToast('設定已儲存', 'success');
+                },
+
+                // 顯示客製化提示框 (取代 alert)
+                showToast(message, type = 'success') {
+                    this.notification.message = message;
+                    this.notification.type = type;
+                    this.notification.show = true;
+                    
+                    setTimeout(() => {
+                        this.notification.show = false;
+                    }, 3000);
+                },
+
+                // 格式化日期顯示
+                formatDate(dateStr) {
+                    const date = new Date(dateStr);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                }
+            },
+            mounted() {
+                // 初始化讀取資料
+                this.loadData();
+                
+                // 準備設定視窗的預設值
+                this.tempUserA = this.userA;
+                this.tempUserB = this.userB;
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
