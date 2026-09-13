@@ -1,11 +1,11 @@
 {
-  "name": "家事洗碗紀錄 APP",
+  "name": "洗碗紀錄器",
   "short_name": "洗碗紀錄",
-  "description": "本地離線運作之兩人洗碗輪替與登記 APP",
+  "description": "公平、透明的洗碗輪替紀錄器",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f1f5f9",
-  "theme_color": "#2563eb",
+  "background_color": "#f3f4f6",
+  "theme_color": "#3b82f6",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3073/3073992.png",
