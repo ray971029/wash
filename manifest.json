@@ -1,6 +1,6 @@
 {
   "name": "洗碗紀錄器",
-  "short_name": "洗碗紀錄",
+  "short_name": "洗碗紀錄器",
   "description": "公平、透明的洗碗輪替紀錄器",
   "start_url": "./index.html",
   "display": "standalone",
